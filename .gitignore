@@ -1,0 +1,14 @@
+# Dependencias de Node (no se suben a GitHub, se regeneran)
+node_modules/
+
+# Archivos de sistema
+.DS_Store
+Thumbs.db
+
+# Archivos de entorno local
+.env
+.env.local
+
+# Carpeta de caché de Vite
+.vite/
+dist/
