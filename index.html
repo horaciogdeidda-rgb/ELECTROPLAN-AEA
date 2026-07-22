@@ -1,0 +1,407 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>ELECTROPLAN.AEA — Workspace de Ingeniería Eléctrica</title>
+  <!-- FontAwesome Icons -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <!-- Stylesheet -->
+  <link rel="stylesheet" href="style.css">
+  <!-- html2pdf.js for PDF Export -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+  <!-- GSAP for smooth property tweening -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/gsap.min.js"></script>
+</head>
+<body>
+
+  <!-- NAVBAR (La Isla de Monitoreo) -->
+  <div class="navbar-wrapper">
+    <nav class="navbar">
+      <div class="brand-section">
+        <div class="brand-title"><i class="fa-solid fa-bolt"></i> ELECTROPLAN<span>.AEA</span></div>
+        <div class="normative-badge">
+          <span class="led-indicator" id="led-status"></span>
+          <span id="normative-active-text">NORMATIVA: AEA 90364-7-770 (VIVIENDA)</span>
+        </div>
+      </div>
+      
+      <div class="telemetry-time">
+        <div><i class="fa-solid fa-database"></i> GUARDADOS: <span class="history-counter" id="history-counter-btn">0</span></div>
+        <div><i class="fa-solid fa-clock"></i> <span id="clock-display">00:00:00</span></div>
+      </div>
+    </nav>
+  </div>
+
+  <!-- MAIN WORKSPACE -->
+  <main class="workspace-container">
+    
+    <!-- LEFT PANEL: AEA 90364 Parts Assistant -->
+    <aside class="panel">
+      <div class="panel-header">
+        <span>Guía de Normativa AEA 90364</span>
+        <i class="fa-solid fa-circle-info"></i>
+      </div>
+      <div class="panel-body" style="overflow-y: auto; max-height: calc(100vh - 160px);">
+        <div class="parts-list" id="parts-list-container">
+          <!-- Part cards will be loaded here dynamically -->
+        </div>
+        
+        <!-- Active part checklist details -->
+        <div class="checklist-container" id="active-part-checklist">
+          <div class="checklist-title" id="checklist-title">Checklist Reglamentario</div>
+          <ul class="checklist-items" id="checklist-items-list">
+            <li>Seleccione una parte del reglamento para desplegar la ayuda rápida y sus coeficientes asociados.</li>
+          </ul>
+        </div>
+      </div>
+    </aside>
+
+    <!-- CENTRAL WORKSPACE: Calculations & Oscilloscope -->
+    <section class="central-workspace">
+      
+      <!-- Tab selector -->
+      <div class="tab-selector">
+        <button class="tab-btn active" id="tab-cables-btn" data-tab="cables">
+          <i class="fa-solid fa-plug"></i> Conductores y Caída de Tensión
+        </button>
+        <button class="tab-btn" id="tab-conduits-btn" data-tab="conduits">
+          <i class="fa-solid fa-circle-notch"></i> Canalizaciones (Fill-Rate)
+        </button>
+      </div>
+
+      <!-- CALCULATOR INPUT MODULE -->
+      <div class="panel">
+        <div class="panel-header">
+          <span id="calc-header-title">Consola de Cálculo: Conductores y Caída de Tensión</span>
+          <span class="mono-data" style="color: var(--clay);" id="telemetry-overhead">TELEMETRÍA ACTIVA</span>
+        </div>
+        <div class="panel-body">
+          
+          <!-- TAB CABLES: Conductores -->
+          <div class="calc-tab-content" id="tab-cables">
+            <div class="calc-grid">
+              
+              <!-- Left Inputs -->
+              <div>
+                <div class="form-group">
+                  <label class="form-label">
+                    <span>Tipo de Carga</span>
+                    <span class="form-value-badge" id="load-type-badge">Potencia (kW)</span>
+                  </label>
+                  <select class="form-select" id="calc-load-type">
+                    <option value="power">Potencia Activa (kW)</option>
+                    <option value="current">Corriente de Proyecto Ib (A)</option>
+                  </select>
+                </div>
+
+                <div class="form-group">
+                  <label class="form-label">
+                    <span id="label-load-slider">Carga a Alimentar</span>
+                    <span class="form-value-badge" id="val-load-slider">5 kW</span>
+                  </label>
+                  <input type="range" class="range-slider" id="input-load-slider" min="0.5" max="50" step="0.5" value="5">
+                </div>
+
+                <div class="form-group">
+                  <label class="form-label">
+                    <span>Tensión de Servicio</span>
+                    <span class="form-value-badge" id="val-voltage">220 V</span>
+                  </label>
+                  <select class="form-select" id="calc-voltage">
+                    <option value="220">220V - Monofásico (1F + N)</option>
+                    <option value="380">380V - Trifásico (3F + N)</option>
+                  </select>
+                </div>
+
+                <div class="form-group">
+                  <label class="form-label">
+                    <span>Factor de Potencia (cos φ)</span>
+                    <span class="form-value-badge" id="val-cosphi">0.85</span>
+                  </label>
+                  <input type="range" class="range-slider" id="input-cosphi" min="0.70" max="1.00" step="0.05" value="0.85">
+                </div>
+              </div>
+
+              <!-- Right Inputs -->
+              <div>
+                <div class="form-group">
+                  <label class="form-label">
+                    <span>Longitud de Línea</span>
+                    <span class="form-value-badge" id="val-length">25 m</span>
+                  </label>
+                  <input type="range" class="range-slider" id="input-length" min="5" max="250" step="5" value="25">
+                </div>
+
+                <div class="form-group">
+                  <label class="form-label">
+                    <span>Tipo de Canalización</span>
+                  </label>
+                  <select class="form-select" id="calc-method">
+                    <option value="conduit">Cañería embutida / a la vista (PVC/Hierro)</option>
+                    <option value="tray">Bandeja portacables perforada</option>
+                    <option value="underground">Subterráneo directamente enterrado</option>
+                  </select>
+                </div>
+
+                <div class="form-group">
+                  <label class="form-label">
+                    <span>Temperatura Ambiente</span>
+                    <span class="form-value-badge" id="val-temp">30 °C</span>
+                  </label>
+                  <input type="range" class="range-slider" id="input-temp" min="10" max="60" step="5" value="30">
+                </div>
+
+                <div class="form-group">
+                  <label class="form-label">
+                    <span>Circuitos Agrupados</span>
+                    <span class="form-value-badge" id="val-circuits">1 cto.</span>
+                  </label>
+                  <input type="range" class="range-slider" id="input-circuits" min="1" max="9" step="1" value="1">
+                </div>
+
+                <div class="form-group">
+                  <label class="form-label">
+                    <span>Aplicación del Circuito</span>
+                  </label>
+                  <select class="form-select" id="calc-apptype">
+                    <option value="lighting">Iluminación General (IUG / IUE) [Límite ΔU: 3%]</option>
+                    <option value="power" selected>Tomacorrientes Generales (TUG / TUE) [Límite ΔU: 5%]</option>
+                    <option value="special">Circuitos Especiales (APM / TUE) [Límite ΔU: 5%]</option>
+                    <option value="main">Alimentación de Tableros (Línea Seccional) [Límite ΔU: 5%]</option>
+                  </select>
+                </div>
+              </div>
+
+            </div>
+          </div>
+
+          <!-- TAB CONDUITS: Llenado de Cañerías -->
+          <div class="calc-tab-content" id="tab-conduits" style="display: none;">
+            <div class="calc-grid">
+              
+              <!-- Cañería Inputs -->
+              <div>
+                <div class="form-group">
+                  <label class="form-label"><span>Tipo de Caño Comercial</span></label>
+                  <select class="form-select" id="conduit-pipe-type">
+                    <option value="corrugado">PVC Corrugado (Liviano/Pesado)</option>
+                    <option value="rl">PVC Rígido Liviano (RL)</option>
+                    <option value="rs">Hierro Semipesado (RS)</option>
+                  </select>
+                </div>
+
+                <div class="form-group">
+                  <label class="form-label"><span>Diámetro de Cañería</span></label>
+                  <select class="form-select" id="conduit-pipe-size">
+                    <!-- Loaded dynamically from JS -->
+                  </select>
+                </div>
+
+                <!-- Cables a instalar -->
+                <div style="border-top: 1px dashed rgba(46, 64, 54, 0.4); margin-top: 15px; padding-top: 15px;">
+                  <span class="form-label" style="margin-bottom: 10px;">Conductores a Instalar (IRAM NM 247-3)</span>
+                  
+                  <div class="form-group">
+                    <label class="form-label">
+                      <span>Fase y Neutro (Cantidad y Sección)</span>
+                      <span class="form-value-badge" id="cables-active-display">3x 2.5 mm²</span>
+                    </label>
+                    <div style="display: flex; gap: 8px;">
+                      <select class="form-select" id="conduit-active-qty" style="width: 80px;">
+                        <option value="1">1</option>
+                        <option value="2">2</option>
+                        <option value="3" selected>3</option>
+                        <option value="4">4</option>
+                        <option value="5">5</option>
+                        <option value="6">6</option>
+                      </select>
+                      <select class="form-select" id="conduit-active-sec">
+                        <!-- Loaded dynamically -->
+                      </select>
+                    </div>
+                  </div>
+
+                  <div class="form-group">
+                    <label class="form-label">
+                      <span>Tierra (Protección PE)</span>
+                      <span class="form-value-badge" id="cables-pe-display">1x 2.5 mm²</span>
+                    </label>
+                    <div style="display: flex; gap: 8px;">
+                      <select class="form-select" id="conduit-pe-qty" style="width: 80px;">
+                        <option value="0">0</option>
+                        <option value="1" selected>1</option>
+                        <option value="2">2</option>
+                      </select>
+                      <select class="form-select" id="conduit-pe-sec">
+                        <!-- Loaded dynamically -->
+                      </select>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Graphic preview / Fill meter -->
+              <div style="display: flex; flex-direction: column; justify-content: center; align-items: center;">
+                <div class="form-label" style="text-align: center; width: 100%;">Vista de Ocupación Transversal (Límite: 35%)</div>
+                
+                <div class="conduit-visualizer" style="margin-top: 15px;">
+                  <div class="conduit-circle-wrapper" id="conduit-circle-preview">
+                    <div class="fill-watermark" id="fill-watermark-text">35%</div>
+                    <div class="cable-bundle" id="conduit-cable-bundle">
+                      <!-- Render cables dynamically in JS -->
+                    </div>
+                  </div>
+                </div>
+                
+                <div style="margin-top: 15px; text-align: center; font-size: 11.5px; line-height: 1.4; color: rgba(242, 240, 233, 0.7);" id="conduit-fill-summary">
+                  Llenado correcto: <strong>-- %</strong> de ocupación útil.
+                </div>
+              </div>
+
+            </div>
+          </div>
+
+        </div>
+      </div>
+
+      <!-- GRAPHICS & TELEMETRY SCREEN -->
+      <div class="monitor-grid">
+        
+        <!-- OScilloscope Panel -->
+        <div class="oscilloscope-panel">
+          <div class="form-label" style="position: absolute; top: 15px; left: 20px; z-index: 5;">MONITOREO DE ONDA SENOIDAL AC</div>
+          <canvas class="oscilloscope-canvas" id="oscilloscope-screen"></canvas>
+        </div>
+
+        <!-- Telemetry Results -->
+        <div class="results-panel">
+          <div class="result-main">
+            <div class="result-lbl">Sección de Conductor Recomendada</div>
+            <div class="result-val-huge" id="res-section">2.5 <span class="cormorant-unit">mm²</span></div>
+          </div>
+          
+          <div style="display: flex; flex-direction: column; gap: 4px;">
+            <div class="result-row">
+              <span>Corriente de Proyecto (Ib):</span>
+              <span id="res-ib">-- A</span>
+            </div>
+            <div class="result-row">
+              <span>Corriente Admisible Corregida (Iz):</span>
+              <span id="res-iz">-- A</span>
+            </div>
+            <div class="result-row">
+              <span>Caída de Tensión (ΔU %):</span>
+              <span id="res-vdrop">-- %</span>
+            </div>
+            <div class="result-row">
+              <span>Verificación Térmica e Impedancia:</span>
+              <span id="res-status" style="color: var(--neon-green);">CONFORME</span>
+            </div>
+          </div>
+        </div>
+
+      </div>
+
+    </section>
+
+    <!-- RIGHT PANEL: Budget Creator (AAIERIC) -->
+    <aside class="panel budget-panel">
+      <div class="panel-header">
+        <span>Presupuesto Técnico</span>
+        <i class="fa-solid fa-list-check"></i>
+      </div>
+      <div class="panel-body" style="display: flex; flex-direction: column; height: calc(100vh - 160px);">
+        
+        <!-- Search catalog field -->
+        <div class="budget-search-box">
+          <input type="text" class="form-input" id="budget-catalog-search" placeholder="🔍 Buscar ítems de AAIERIC...">
+          
+          <div class="catalog-dropdown" id="catalog-dropdown-list">
+            <!-- Items populated by JS -->
+          </div>
+        </div>
+
+        <!-- Selected budget items -->
+        <div style="flex: 1; display: flex; flex-direction: column; min-height: 0;">
+          <div class="form-label" style="margin-bottom: 8px;">Trabajos Agregados al Presupuesto</div>
+          
+          <div class="budget-items-list" id="budget-items-container">
+            <!-- Empty state message or item cards loaded here -->
+            <div style="text-align: center; color: rgba(242, 240, 233, 0.4); padding: 40px 10px; font-size: 12px; border: 1px dashed rgba(46,64,54,0.4); border-radius: 6px;">
+              <i class="fa-regular fa-folder-open" style="font-size: 24px; margin-bottom: 10px; display: block;"></i>
+              Presupuesto vacío.<br>Busque y agregue tareas del catálogo AAIERIC arriba para armar el presupuesto del cliente.
+            </div>
+          </div>
+        </div>
+
+        <!-- Configuración de Precios e Indicador Total -->
+        <div style="margin-top: 12px; display: flex; flex-direction: column; gap: 8px;">
+          <div style="display: flex; justify-content: space-between; align-items: center; background: rgba(46, 64, 54, 0.15); border: 1px solid var(--charcoal-border); border-radius: 6px; padding: 8px 10px;">
+            <span style="font-size: 10px; font-family: var(--font-mono); font-weight: bold; color: rgba(242,240,233,0.7);">MOSTRAR PRECIOS EN PDF</span>
+            <input type="checkbox" id="budget-include-prices" checked style="cursor: pointer; width: 15px; height: 15px; accent-color: var(--clay);">
+          </div>
+          
+          <div style="background: var(--charcoal); border: 1px solid rgba(46,64,54,0.6); border-radius: 6px; padding: 10px 12px; text-align: right;" id="budget-total-container">
+            <div class="result-lbl" style="font-size: 9px; margin-bottom: 2px;">Total Mano de Obra Cotizado</div>
+            <div style="font-family: var(--font-mono); font-size: 18px; font-weight: bold; color: var(--neon-green);" id="budget-total-val">$ 0</div>
+          </div>
+        </div>
+
+        <!-- Global operations footer -->
+        <div class="budget-footer">
+          <button class="btn-secondary" id="btn-project-save" title="Guardar memoria y presupuesto en historial local">
+            <i class="fa-solid fa-floppy-disk"></i> Guardar
+          </button>
+          <button class="btn-primary" id="btn-project-pdf" style="flex: 1;">
+            <i class="fa-solid fa-file-pdf"></i> Exportar PDF
+          </button>
+        </div>
+
+      </div>
+    </aside>
+
+  </main>
+
+  <!-- MODAL: Historial de Cálculos -->
+  <div class="modal-overlay" id="history-modal">
+    <div class="modal-content">
+      <div class="modal-header">
+        <span>Historial de Proyectos Guardados</span>
+        <button class="modal-close" id="history-modal-close">&times;</button>
+      </div>
+      <div class="modal-body">
+        <div class="history-list" id="history-projects-list">
+          <!-- Loaded from JS -->
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn-secondary" id="history-modal-clear">Borrar Todo Historial</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL: Solicitar Nombre al Guardar -->
+  <div class="modal-overlay" id="save-modal">
+    <div class="modal-content">
+      <div class="modal-header">
+        <span>Guardar Proyecto Eléctrico</span>
+        <button class="modal-close" id="save-modal-close">&times;</button>
+      </div>
+      <div class="modal-body">
+        <div class="form-group">
+          <label class="form-label" style="color: var(--charcoal); margin-bottom: 8px;">Nombre del Proyecto o Cliente</label>
+          <input type="text" class="form-input" id="save-project-name" placeholder="Ej: Obra Calle Rivadavia - Dto 2B" style="background: white; color: black; border-color: #999;">
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn-secondary" id="save-modal-cancel">Cancelar</button>
+        <button class="btn-primary" id="save-modal-confirm">Confirmar Guardado</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Main script -->
+  <script type="module" src="app.js"></script>
+</body>
+</html>

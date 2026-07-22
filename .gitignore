@@ -12,3 +12,6 @@ Thumbs.db
 # Carpeta de caché de Vite
 .vite/
 dist/
+
+# PDFs de normativas y referencia (archivos pesados, se conservan localmente)
+*.pdf
