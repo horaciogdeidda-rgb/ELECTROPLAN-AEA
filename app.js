@@ -1,6 +1,7 @@
 import { 
   calculateConductor, 
   calculateConduitFill, 
+  validateProtections,
   CONDUITS, 
   SECTIONS 
 } from './modules/calculator.js';
@@ -395,9 +396,11 @@ function initEventListeners() {
   // Tabs
   const tabCablesBtn = document.getElementById('tab-cables-btn');
   const tabConduitsBtn = document.getElementById('tab-conduits-btn');
+  const tabProtectionsBtn = document.getElementById('tab-protections-btn');
   
   tabCablesBtn.addEventListener('click', () => switchTab('cables'));
   tabConduitsBtn.addEventListener('click', () => switchTab('conduits'));
+  tabProtectionsBtn.addEventListener('click', () => switchTab('protections'));
 
   // Sliders e Inputs de cálculo (Conductores)
   const calcInputs = [
@@ -484,6 +487,19 @@ function initEventListeners() {
     document.getElementById(id).addEventListener('change', runConduitCalculator);
   });
 
+  // Inputs de Protecciones (PIA / ID)
+  const protPiaSelect = document.getElementById('prot-pia-caliber');
+  const protIdSelect = document.getElementById('prot-id-caliber');
+  
+  protPiaSelect.addEventListener('change', () => {
+    document.getElementById('val-pia-caliber').textContent = protPiaSelect.value + ' A';
+    runProtectionsCalculator();
+  });
+  protIdSelect.addEventListener('change', () => {
+    document.getElementById('val-id-caliber').textContent = protIdSelect.value + ' A';
+    runProtectionsCalculator();
+  });
+
   // Catálogo de presupuestos búsqueda
   const searchInput = document.getElementById('budget-catalog-search');
   const dropdown = document.getElementById('catalog-dropdown-list');
@@ -549,31 +565,39 @@ function initEventListeners() {
 function switchTab(tabId) {
   activeTab = tabId;
   
-  const tabCables = document.getElementById('tab-cables');
-  const tabConduits = document.getElementById('tab-conduits');
-  const tabCablesBtn = document.getElementById('tab-cables-btn');
-  const tabConduitsBtn = document.getElementById('tab-conduits-btn');
+  const tabs = {
+    cables: document.getElementById('tab-cables'),
+    conduits: document.getElementById('tab-conduits'),
+    protections: document.getElementById('tab-protections')
+  };
+  const btns = {
+    cables: document.getElementById('tab-cables-btn'),
+    conduits: document.getElementById('tab-conduits-btn'),
+    protections: document.getElementById('tab-protections-btn')
+  };
   const headerTitle = document.getElementById('calc-header-title');
 
-  if (tabId === 'cables') {
-    tabCables.style.display = 'block';
-    tabConduits.style.display = 'none';
-    tabCablesBtn.classList.add('active');
-    tabConduitsBtn.classList.remove('active');
-    headerTitle.textContent = "Consola de Cálculo: Conductores y Caída de Tensión";
-    
-    // Cambiar la pantalla del osciloscopio a telemetría de caída
-    runCalculator();
-  } else {
-    tabCables.style.display = 'none';
-    tabConduits.style.display = 'block';
-    tabCablesBtn.classList.remove('active');
-    tabConduitsBtn.classList.add('active');
-    headerTitle.textContent = "Consola de Cálculo: Dimensionamiento de Cañerías (Fill-rate)";
-    
-    // Ejecutar cálculo de cañería
-    runConduitCalculator();
-  }
+  const titles = {
+    cables: "Consola de Cálculo: Conductores y Caída de Tensión",
+    conduits: "Consola de Cálculo: Dimensionamiento de Cañerías (Fill-rate)",
+    protections: "Consola de Cálculo: Coordinación de Protecciones (PIA/ID)"
+  };
+
+  // Ocultar todos, desactivar todos
+  Object.keys(tabs).forEach(key => {
+    tabs[key].style.display = 'none';
+    btns[key].classList.remove('active');
+  });
+
+  // Mostrar y activar la pestaña seleccionada
+  tabs[tabId].style.display = 'block';
+  btns[tabId].classList.add('active');
+  headerTitle.textContent = titles[tabId];
+
+  // Ejecutar el cálculo correspondiente
+  if (tabId === 'cables') runCalculator();
+  else if (tabId === 'conduits') runConduitCalculator();
+  else if (tabId === 'protections') runProtectionsCalculator();
 }
 
 // --- ACTUALIZACIÓN DE INDICADORES DE VALORES EN SLIDERS ---
@@ -596,8 +620,6 @@ function updateValueBadges() {
 let currentCalcState = {};
 
 function runCalculator() {
-  if (activeTab !== 'cables') return;
-
   const loadType = document.getElementById('calc-load-type').value;
   const loadValue = parseFloat(document.getElementById('input-load-slider').value);
   const voltage = parseInt(document.getElementById('calc-voltage').value);
@@ -620,6 +642,9 @@ function runCalculator() {
   currentCalcState.temp = temp;
   currentCalcState.circuits = circuits;
   currentCalcState.appType = appType;
+
+  // Solo actualizar la UI visual cuando estamos en la pestaña de cables
+  if (activeTab !== 'cables') return;
 
   // Actualizar resultados en Pantalla
   document.getElementById('res-section').innerHTML = `${result.recommendedSection} <span class="cormorant-unit">mm²</span>`;
@@ -657,6 +682,7 @@ function runCalculator() {
       vDropPercent: result.vDropPercent,
       voltage: voltage,
       isFault: isFault,
+      statusMessage: null,
       ease: "power2.out"
     });
   }
@@ -805,6 +831,94 @@ function drawConduitCablesGraphic(result) {
   });
 }
 
+// --- CÁLCULO DE PROTECCIONES (PIA/ID) ---
+let currentProtectionsState = {};
+
+function runProtectionsCalculator() {
+  const InPia = parseInt(document.getElementById('prot-pia-caliber').value);
+  const InId = parseInt(document.getElementById('prot-id-caliber').value);
+
+  // Tomar Ib e Iz del último cálculo de conductores
+  const Ib = parseFloat(currentCalcState.Ib) || 0;
+  const Iz = parseFloat(currentCalcState.izCorrected) || 0;
+
+  const result = validateProtections(Ib, Iz, InPia, InId);
+  
+  currentProtectionsState = { ...result, InPia, InId, Ib, Iz };
+
+  // Actualizar la fórmula visual
+  const formulaIb = document.getElementById('formula-ib');
+  const formulaIn = document.getElementById('formula-in');
+  const formulaIz = document.getElementById('formula-iz');
+
+  formulaIb.textContent = `Ib = ${Ib.toFixed(1)}A`;
+  formulaIn.textContent = `In = ${InPia}A`;
+  formulaIz.textContent = `Iz = ${Iz.toFixed(1)}A`;
+
+  // Colorear según resultado
+  if (!result.isPiaMinOk) {
+    formulaIn.style.color = 'var(--clay)';
+    formulaIb.style.color = 'var(--clay)';
+    formulaIz.style.color = 'var(--cream)';
+  } else if (!result.isPiaMaxOk) {
+    formulaIn.style.color = 'var(--clay)';
+    formulaIb.style.color = 'var(--cream)';
+    formulaIz.style.color = 'var(--clay)';
+  } else {
+    formulaIn.style.color = 'var(--neon-green)';
+    formulaIb.style.color = 'var(--cream)';
+    formulaIz.style.color = 'var(--cream)';
+  }
+
+  // Construir resumen de validación
+  const summaryEl = document.getElementById('prot-validation-summary');
+  let summaryHTML = '';
+
+  if (Ib === 0 || Iz === 0) {
+    summaryHTML = `<span style="color: rgba(242,240,233,0.5);">⚙ Configure primero los parámetros del circuito en la pestaña <strong>Conductores</strong> para obtener los valores de Ib e Iz.</span>`;
+  } else if (result.isFault) {
+    summaryHTML = `<span style="color: var(--clay); font-weight: bold;">⚠ FALLA DE COORDINACIÓN DETECTADA:</span><br>`;
+    if (result.piaError) summaryHTML += `• ${result.piaError}<br>`;
+    if (result.idError) summaryHTML += `• ${result.idError}`;
+  } else {
+    summaryHTML = `<span style="color: var(--neon-green); font-weight: bold;">✓ COORDINACIÓN CONFORME (AEA 90364-4-43)</span><br>`;
+    summaryHTML += `La térmica (${InPia}A) protege correctamente el cable (Iz=${Iz.toFixed(1)}A) y el disyuntor (${InId}A) soporta el calibre de la térmica.`;
+  }
+  summaryEl.innerHTML = summaryHTML;
+
+  // Comunicar al osciloscopio
+  if (oscilloscope) {
+    if (result.isFault) {
+      let oscMsg = '⚠ FAULT: PROT COORD ⚠';
+      if (result.piaError && !result.isPiaMinOk) oscMsg = '⚠ IN_PIA < IB ⚠';
+      else if (result.piaError && !result.isPiaMaxOk) oscMsg = '⚠ IN_PIA > IZ ⚠';
+      else if (result.idError) oscMsg = '⚠ ID < PIA ⚠';
+      
+      gsap.to(oscilloscope, {
+        duration: 0.5,
+        amplitude: 55,
+        noise: 10,
+        vDropPercent: 8,
+        isFault: true,
+        statusMessage: oscMsg,
+        voltage: currentCalcState.voltage || 220,
+        ease: "power2.out"
+      });
+    } else {
+      gsap.to(oscilloscope, {
+        duration: 0.5,
+        amplitude: 30,
+        noise: 0.05,
+        vDropPercent: currentCalcState.vDropPercent || 1,
+        isFault: false,
+        statusMessage: 'PROT: COORD OK',
+        voltage: currentCalcState.voltage || 220,
+        ease: "power2.out"
+      });
+    }
+  }
+}
+
 // --- HISTORIAL & LOCALSTORAGE ---
 function openSaveModal() {
   const nameInput = document.getElementById('save-project-name');
@@ -832,6 +946,9 @@ function confirmSaveProject() {
   const calculatorState = { ...currentCalcState };
   if (currentConduitState.fillRate !== undefined) {
     calculatorState.conduitResult = currentConduitState;
+  }
+  if (currentProtectionsState.InPia !== undefined) {
+    calculatorState.protectionsResult = currentProtectionsState;
   }
 
   const budgetItems = budgetManager.serialize();
@@ -963,7 +1080,16 @@ function loadProjectIntoWorkspace(projectId) {
     }
   }
 
-  // 3. Cargar presupuesto
+  // 3. Cargar protecciones si existen
+  if (cs.protectionsResult) {
+    const pr = cs.protectionsResult;
+    document.getElementById('prot-pia-caliber').value = pr.InPia;
+    document.getElementById('val-pia-caliber').textContent = pr.InPia + ' A';
+    document.getElementById('prot-id-caliber').value = pr.InId;
+    document.getElementById('val-id-caliber').textContent = pr.InId + ' A';
+  }
+
+  // 4. Cargar presupuesto
   budgetManager.loadItems(project.budgetItems);
   renderBudgetItems();
 
@@ -973,6 +1099,7 @@ function loadProjectIntoWorkspace(projectId) {
   // Correr cálculos
   runCalculator();
   runConduitCalculator();
+  runProtectionsCalculator();
 
   alert(`Proyecto "${project.name}" cargado exitosamente en el Workspace.`);
 }
@@ -994,6 +1121,9 @@ function handleExportPDF() {
   }
   if (currentConduitState.fillRate !== undefined) {
     calculatorState.conduitResult = currentConduitState;
+  }
+  if (currentProtectionsState.InPia !== undefined) {
+    calculatorState.protectionsResult = currentProtectionsState;
   }
 
   const mockProject = {

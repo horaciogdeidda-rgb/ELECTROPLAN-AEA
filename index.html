@@ -68,6 +68,9 @@
         <button class="tab-btn" id="tab-conduits-btn" data-tab="conduits">
           <i class="fa-solid fa-circle-notch"></i> Canalizaciones (Fill-Rate)
         </button>
+        <button class="tab-btn" id="tab-protections-btn" data-tab="protections">
+          <i class="fa-solid fa-shield-halved"></i> Protecciones (PIA/ID)
+        </button>
       </div>
 
       <!-- CALCULATOR INPUT MODULE -->
@@ -256,6 +259,67 @@
                 
                 <div style="margin-top: 15px; text-align: center; font-size: 11.5px; line-height: 1.4; color: rgba(242, 240, 233, 0.7);" id="conduit-fill-summary">
                   Llenado correcto: <strong>-- %</strong> de ocupación útil.
+                </div>
+              </div>
+
+            </div>
+          </div>
+
+          <!-- TAB PROTECTIONS: Protecciones de Línea -->
+          <div class="calc-tab-content" id="tab-protections" style="display: none;">
+            <div class="calc-grid">
+              
+              <!-- Configuración de Protecciones -->
+              <div>
+                <div class="form-group">
+                  <label class="form-label">
+                    <span>Interruptor Termomagnético (PIA)</span>
+                    <span class="form-value-badge" id="val-pia-caliber">20 A</span>
+                  </label>
+                  <select class="form-select" id="prot-pia-caliber">
+                    <option value="6">6 A</option>
+                    <option value="10">10 A</option>
+                    <option value="16">16 A</option>
+                    <option value="20" selected>20 A</option>
+                    <option value="25">25 A</option>
+                    <option value="32">32 A</option>
+                    <option value="40">40 A</option>
+                    <option value="50">50 A</option>
+                    <option value="63">63 A</option>
+                    <option value="80">80 A</option>
+                    <option value="100">100 A</option>
+                  </select>
+                </div>
+
+                <div class="form-group">
+                  <label class="form-label">
+                    <span>Interruptor Diferencial (ID - Disyuntor)</span>
+                    <span class="form-value-badge" id="val-id-caliber">25 A</span>
+                  </label>
+                  <select class="form-select" id="prot-id-caliber">
+                    <option value="25" selected>25 A</option>
+                    <option value="40">40 A</option>
+                    <option value="63">63 A</option>
+                    <option value="80">80 A</option>
+                    <option value="100">100 A</option>
+                  </select>
+                </div>
+              </div>
+
+              <!-- Telemetría y Ecuaciones AEA -->
+              <div style="display: flex; flex-direction: column; justify-content: center; gap: 10px; background: rgba(46,64,54,0.1); border: 1px solid var(--charcoal-border); padding: 16px; border-radius: 8px;">
+                <div class="form-label" style="margin-bottom: 0;">Coordinación AEA 90364-4-43</div>
+                
+                <div style="font-family: var(--font-mono); font-size: 14px; text-align: center; padding: 10px; background: var(--charcoal); border-radius: 6px; border: 1px dashed rgba(242,240,233,0.15);">
+                  <span id="formula-ib" style="color: var(--cream);">Ib</span>
+                  <span style="color: var(--clay);"> ≤ </span>
+                  <span id="formula-in" style="color: var(--clay); font-weight: bold;">In (PIA)</span>
+                  <span style="color: var(--clay);"> ≤ </span>
+                  <span id="formula-iz" style="color: var(--cream);">Iz</span>
+                </div>
+
+                <div style="font-size: 11.5px; line-height: 1.4; color: rgba(242, 240, 233, 0.8);" id="prot-validation-summary">
+                  Cargando telemetría de protecciones...
                 </div>
               </div>
 

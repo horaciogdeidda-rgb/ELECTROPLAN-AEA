@@ -40,10 +40,11 @@ export class Oscilloscope {
     this.ctx.scale(window.devicePixelRatio, window.devicePixelRatio);
   }
 
-  updateState({ voltage, vDropPercent, isFault }) {
+  updateState({ voltage, vDropPercent, isFault, statusMessage }) {
     this.voltage = voltage;
     this.vDropPercent = vDropPercent;
     this.isFault = isFault;
+    this.statusMessage = statusMessage || null;
 
     if (isFault) {
       // Onda distorsionada, mayor frecuencia de ruido visual
@@ -161,11 +162,11 @@ export class Oscilloscope {
       if (Math.floor(this.time / 3) % 2 === 0) {
         ctx.fillStyle = this.colorFault;
         ctx.font = 'bold 11px "JetBrains Mono", "Fira Code", monospace';
-        ctx.fillText(`⚠ CAIDA EXCESIVA (> REG. AEA) ⚠`, width / 2, height - 12);
+        ctx.fillText(this.statusMessage || `⚠ CAIDA EXCESIVA (> REG. AEA) ⚠`, width / 2, height - 12);
       }
     } else {
       ctx.fillStyle = 'rgba(46, 214, 114, 0.6)';
-      ctx.fillText(`ESTADO: LINEA OK`, width / 2, height - 12);
+      ctx.fillText(this.statusMessage || `ESTADO: LINEA OK`, width / 2, height - 12);
     }
   }
 

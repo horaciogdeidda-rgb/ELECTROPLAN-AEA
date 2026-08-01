@@ -384,6 +384,65 @@ export function exportProjectToPDF(project, budgetGrouped, includePrices = true)
         ` : ''}
       `;
     }
+
+    // Agregar sección de protecciones si existe en el estado del cálculo
+    if (calculatorState.protectionsResult) {
+      const pr = calculatorState.protectionsResult;
+      page1HTML += `
+        <div class="section-title">3. Coordinación de Protecciones de Seguridad (AEA 90364-4-43)</div>
+        
+        <table class="data-table">
+          <colgroup>
+            <col style="width: 32%;">
+            <col style="width: 30%;">
+            <col style="width: 20%;">
+            <col style="width: 18%;">
+          </colgroup>
+          <thead>
+            <tr>
+              <th>Dispositivo de Protección</th>
+              <th>Calibre Seleccionado</th>
+              <th style="text-align: center;">Regla Evaluada</th>
+              <th style="text-align: center;">Estado</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><strong>Térmica General (PIA):</strong></td>
+              <td class="mono-data">${pr.InPia} A (Curva C)</td>
+              <td class="mono-data" style="text-align: center;">Ib ≤ In ≤ Iz</td>
+              <td style="text-align: center;">
+                <span class="badge ${pr.isPiaOk ? 'badge-ok' : 'badge-err'}">
+                  ${pr.isPiaOk ? 'CONFORME' : 'ANOMALÍA'}
+                </span>
+              </td>
+            </tr>
+            <tr class="even-row">
+              <td><strong>Disyuntor Diferencial (ID):</strong></td>
+              <td class="mono-data">${pr.InId} A (Sensib. 30mA)</td>
+              <td class="mono-data" style="text-align: center;">In,ID ≥ In,PIA</td>
+              <td style="text-align: center;">
+                <span class="badge ${pr.isIdOk ? 'badge-ok' : 'badge-err'}">
+                  ${pr.isIdOk ? 'CONFORME' : 'EXPUESTO'}
+                </span>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+        
+        ${pr.piaError ? `
+          <div class="note-box" style="margin-top:-10px;">
+            <strong>ERROR EN TÉRMICA (PIA):</strong> ${pr.piaError}
+          </div>
+        ` : ''}
+        
+        ${pr.idError ? `
+          <div class="note-box" style="margin-top:-10px;">
+            <strong>ERROR EN DISYUNTOR (ID):</strong> ${pr.idError}
+          </div>
+        ` : ''}
+      `;
+    }
   } else {
     page1HTML += `
       <div style="padding: 100px 20px; text-align: center; color: #666; font-style: italic;">

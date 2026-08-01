@@ -441,3 +441,41 @@ export function calculateConduitFill(pipeType, pipeIndex, cables) {
     cableDetails
   };
 }
+
+/**
+ * Valida la coordinación de protecciones termomagnéticas y disyuntores según la AEA.
+ * @param {number} Ib Corriente de proyecto
+ * @param {number} Iz Corriente admisible corregida del cable
+ * @param {number} InPia Corriente nominal de la térmica (PIA)
+ * @param {number} InId Corriente nominal del disyuntor (ID)
+ * @returns {Object} Resultados de la validación
+ */
+export function validateProtections(Ib, Iz, InPia, InId) {
+  const isPiaMinOk = InPia >= Ib; // Criterio: In >= Ib
+  const isPiaMaxOk = InPia <= Iz; // Criterio: In <= Iz
+  const isIdOk = InId >= InPia;   // Criterio: In_ID >= In_PIA
+
+  let piaError = null;
+  if (!isPiaMinOk) {
+    piaError = `Térmica subdimensionada: calibre seleccionado (${InPia}A) es menor a la corriente de proyecto (${Ib}A). Saltará en servicio normal.`;
+  } else if (!isPiaMaxOk) {
+    piaError = `Peligro en cable: calibre de la térmica (${InPia}A) supera la capacidad del conductor (${Iz}A). ¡Riesgo de incendio!`;
+  }
+
+  let idError = null;
+  if (!isIdOk) {
+    idError = `Disyuntor expuesto: su calibre (${InId}A) es inferior al de la térmica (${InPia}A). Riesgo de daño térmico.`;
+  }
+
+  const isFault = !isPiaMinOk || !isPiaMaxOk || !isIdOk;
+
+  return {
+    isPiaMinOk,
+    isPiaMaxOk,
+    isPiaOk: isPiaMinOk && isPiaMaxOk,
+    isIdOk,
+    piaError,
+    idError,
+    isFault
+  };
+}
